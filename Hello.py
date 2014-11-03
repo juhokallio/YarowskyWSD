@@ -15,14 +15,37 @@ def init_context_list(contexts, seeds):
     return map(classify, contexts)
 
 
-def extract_context_list(text, word, k):
+def build_collocations(contexts, pattern):
+    collocations = [{}, {}, {}, {}, {}, {}]
+
+    def add_collocation(c_index, word, sense):
+        # Not yet in collocation
+        if word not in collocations[c_index]:
+            collocations[c_index][word] = []
+            collocations[c_index][word][sense] = 1
+        else:
+            collocations[c_index][word][sense] += 1
+
+    for context in contexts:
+        sense = context[1]
+        index = context[0].index(pattern)
+        for word_index, word in enumerate(context):
+            if abs(word_index - index) > 1:
+                add_collocation(2, word, sense)
+            elif word_index == index + 1:
+                add_collocation(0, word, sense)
+            elif word_index == index - 1:
+                add_collocation(1, word, sense)
+
+
+def extract_context_list(text, pattern, k):
     words = text.split()
     contexts = []
-    for index, w in enumerate(words):
-        if w == word:
+    for index, word in enumerate(words):
+        if word == pattern:
             begin = max(index - k, 0)
             end = min(index + k + 1, len(words))
-            contexts.append(words[begin : end])
+            contexts.append(words[begin:end])
     return contexts
 
 
