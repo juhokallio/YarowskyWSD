@@ -29,6 +29,7 @@ def build_collocations(contexts, pattern):
     for context in contexts:
         sense = context[1]
         index = context[0].index(pattern)
+	# TODO: Add logic for contexts with multiple patterns
         for word_index, word in enumerate(context):
             if abs(word_index - index) > 1:
                 add_collocation(2, word, sense)
