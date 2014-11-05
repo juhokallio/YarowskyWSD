@@ -110,4 +110,9 @@ class TextExtractionTest(unittest.TestCase):
         collocations = build_collocations(context_list, pattern, k)
         self.assertEqual(collocations[0]["opit"][0], 1)
         self.assertEqual(collocations[0]["menetelmiä"][0], 1)
+        self.assertEqual(collocations[2]["tämän"][0], 1)
+        self.assertEqual(collocations[2]["hetken"][0], 1)
+        self.assertTrue("tutustumaan" not in collocations[2])
+        self.assertTrue("tämän" not in collocations[1])
+        self.assertEqual(collocations[3][("tutkimusongelmiin", "molekyylibiologiassa")][0], 1)
 
