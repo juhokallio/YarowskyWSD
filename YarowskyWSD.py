@@ -75,14 +75,13 @@ def extract_context_list(text, pattern, k):
     return contexts
 
 
-class TextExtractionTest(unittest.TestCase):
+class TextExtraction(unittest.TestCase):
     TEXT = "Erikoistumislinja kouluttaa bioinformatiikan ammattilaisia, jotka kykenevät ymmärtämään biologisia kysymyksenasetteluja laskennallisina haasteina.  Erikoistumislinjan opiskelijana tulet tutustumaan tämän hetken kuumimpiin tutkimusongelmiin molekyylibiologiassa ja opit yleisiä periaatteita ja menetelmiä laskennallisten ongelmien mallintamiseen ja ratkaisuun. Algoritmien ja koneoppimisen perusteiden lisäksi, tutkintoon kuuluu biologiselle datalle räätälöityjä laskennallisia menetelmiä, sekä valinnaisten opintojen kautta tutkinto antaa mahdollisuuden sisällyttää opintoihin varsinaisia molekyylibiologian ja muiden lähialojen kursseja."
 
     def test_extract_context_list(self):
         k = 10
         context_list = extract_context_list(self.TEXT, "biologisia", k)
-        print context_list[0]
-        self.assertEqual(len(context_list), 1)
+        self.assertEqual(len(context_list), 1, msg="Wrong number of matching contexts found")
         context_list = extract_context_list(self.TEXT, "molekyylibiologian", k)
         self.assertEqual(context_list[0][-1], "kursseja.")
         context_list = extract_context_list(self.TEXT, "koneoppimisen", k)

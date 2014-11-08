@@ -24,10 +24,8 @@ class Collocation:
         return math.log(p_sense / (1 - p_sense), 2)
 
     def plus(self, sense):
-        if sense in self.senses:
-            self.senses[sense] += 1
-        else:
-            self.senses[sense] = 1
+        assert sense < len(self.senses), "No such sense"
+        self.senses[sense] += 1
         self.count += 1
         return self
 
@@ -45,12 +43,12 @@ class TextCollocation(unittest.TestCase):
     def test_p(self):
         collocation = Collocation("a", 0, 3)
         collocation.plus(0)
-        self.assertAlmostEqual(collocation.p(0), 0.84, delta=0.01)
-        self.assertAlmostEqual(collocation.p(1), 0.08, delta=0.01)
+        self.assertAlmostEqual(collocation.p(0), 0.84, delta=0.01, msg="Wrong probability with collocation with three senses")
+        self.assertAlmostEqual(collocation.p(1), 0.08, delta=0.01, msg="Wrong probability with collocation with three senses")
         collocation.plus(0).plus(1).plus(2)
-        self.assertAlmostEqual(collocation.p(0), 0.48, delta=0.01)
+        self.assertAlmostEqual(collocation.p(0), 0.48, delta=0.01, msg="Wrong probability with collocation with three senses")
 
     def test_log_likelihood(self):
         collocation = Collocation("a", 0, 2)
         collocation.plus(0)
-        self.assertEqual(collocation.log_likelihood(0), 0)
+        self.assertEqual(collocation.log_likelihood(0), 0, msg="Wrong log likelihood with collocation with two senses")
