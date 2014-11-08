@@ -2,6 +2,7 @@
 
 import unittest
 from models import Collocation
+from os import listdir
 
 
 def init_context_list(contexts, seeds):
@@ -75,6 +76,32 @@ def extract_context_list(text, pattern, k):
             end = min(index + k + 1, len(words))
             contexts.append(words[begin:end])
     return contexts
+
+def extract_contexts_from_file(file_name):
+    txt = open(file_name)
+    print txt.read()
+
+
+def extract_contexts_from_folder(folder, pattern, k):
+    contexts = []
+    for f in listdir(folder):
+        contexts.extend(extract_context_list(open(folder + "/" + f).read(), pattern, k))
+        print "Contexts from the file", f, "extracted"
+    return contexts
+
+
+pattern = "plant"
+k = 10
+folder = "data"
+contexts = extract_contexts_from_folder(folder, pattern, k)
+contexts_with_senses = init_context_list(contexts, ["life", "manufacturing"])
+print "senses added"
+collocations = build_collocations(contexts_with_senses, pattern, k, 2)
+print "collocations created"
+collocation_likelihoods = build_collocation_likelihoods(collocations)
+print "collocations sorted, length: ", len(collocation_likelihoods)
+for i in range(0, 10):
+    print i + 1, collocation_likelihoods[i].log_likelihood(), collocation_likelihoods[i].rule, collocation_likelihoods[i].words, collocation_likelihoods[i].best_sense()
 
 
 class TextExtraction(unittest.TestCase):
