@@ -40,6 +40,7 @@ class Collocation:
 
 
 class TextCollocation(unittest.TestCase):
+    longMessage = True
     def test_p(self):
         collocation = Collocation("a", 0, 3)
         collocation.plus(0)
