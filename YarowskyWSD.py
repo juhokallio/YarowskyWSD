@@ -55,7 +55,7 @@ def init_context_list(contexts, seeds):
     return map(classify, contexts)
 
 
-def build_collocations(contexts_with_senses, pattern, k):
+def build_collocations(contexts_with_senses, pattern, k, sense_count):
     # 0: Word immediately to the right
     # 1:
     #
@@ -63,7 +63,7 @@ def build_collocations(contexts_with_senses, pattern, k):
 
     def add_collocation(words, rule, sense):
         if (words, rule) not in collocations:
-            collocations[(words, rule)] = Collocation(words, rule, sense)
+            collocations[(words, rule)] = Collocation(words, rule, sense_count)
         collocations[(words, rule)].plus(sense)
 
     for context_with_sense in contexts_with_senses:
@@ -152,8 +152,9 @@ class TextExtractionTest(unittest.TestCase):
         pattern = "ja"
         context_list = extract_context_list(self.TEXT, pattern, k)
         self.assertEqual(context_list[0].count(pattern), 2)
-        context_list = init_context_list(context_list, ["yleisiä"])
-        collocations = build_collocations(context_list, pattern, k)
+        senses = ["yleisiä"]
+        context_list = init_context_list(context_list, senses)
+        collocations = build_collocations(context_list, pattern, k, len(senses))
         self.assertEqual(collocations["opit", 0].get_sense_count(0), 1)
         self.assertEqual(collocations["menetelmiä", 0].get_sense_count(0), 1)
         self.assertEqual(collocations["tämän", 2].get_sense_count(0), 1)
@@ -170,5 +171,5 @@ class TextExtractionTest(unittest.TestCase):
         self.assertAlmostEqual(collocation.p(0), 0.48, delta=0.01)
 
     def test_log_likelihood(self):
-        collocation = Collocation("a", 0, 0)
+        collocation = Collocation("a", 0, 1)
         self.assertEqual(collocation.log_likelihood(0), 0)
