@@ -47,12 +47,8 @@ def build_collocations(contexts_with_senses, pattern, k, sense_count):
     return collocations
 
 
-# TODO: optimize with rbtree or something more sensible
 def build_collocation_likelihoods(collocations):
-     epsilon = 0.1
-   #  for collocation in collocations:
-
-
+    return sorted(collocations.values(), lambda x,y: x.cmp(y))
 
 
 # Currently doesn't take account repeating patterns in the end or beginning of corpus.
@@ -123,3 +119,20 @@ class TextExtraction(unittest.TestCase):
         self.assertTrue(("tutustumaan", 2) not in collocations)
         self.assertTrue(("tämän", 1) not in collocations)
         self.assertEqual(collocations[(("tutkimusongelmiin", "molekyylibiologiassa"), 3)].get_sense_count(0), 1)
+
+    def test_build_collocation_likelihoods(self):
+        collocations = {
+            ("ei niin hyva", 0): Collocation("ei niin hyva", 0, 2).plus(0, 2),
+            ("paras", 0): Collocation("paras", 0, 2).plus(0, 40),
+            ("huonoin", 0): Collocation("huonoin", 0, 2),
+            ("jotain", 1): Collocation("jotain", 0, 2).plus(0),
+            ("foo", 2): Collocation("foo", 0, 2).plus(1, 20),
+            (("bar", "bar2"), 3): Collocation(("bar", "bar2"), 0, 2).plus(1, 10),
+        }
+        collocation_likelihoods = build_collocation_likelihoods(collocations)
+        self.assertEqual(collocation_likelihoods[0].words, "paras")
+        self.assertEqual(collocation_likelihoods[1].words, "foo")
+        self.assertEqual(collocation_likelihoods[2].words, ("bar", "bar2"))
+        self.assertEqual(collocation_likelihoods[3].words, "ei niin hyva")
+        self.assertEqual(collocation_likelihoods[4].words, "jotain")
+        self.assertEqual(collocation_likelihoods[5].words, "huonoin")

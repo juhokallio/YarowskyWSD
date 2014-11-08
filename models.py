@@ -40,6 +40,9 @@ class Collocation:
     def get_sense_count(self, sense):
         return self.senses[sense]
 
+    def cmp(self, other):
+        return cmp(other.log_likelihood(), self.log_likelihood())
+
     def __hash__(self):
         return hash((self.words, self.rule))
 
