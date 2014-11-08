@@ -1,0 +1,30 @@
+fel (
+feel,	4440	del(f, e): 13/264024	del(e, e): 89/495530
+fell,	8827	del(e, l): 32/618205	del(l, l): 211/784035
+fuel, 2520	del(f, u): 1/93949
+felt, 3102	del(l, t): 7/119099
+gel, 36		sub(f, g): 5/3332285
+eel, 8		sub(f, e): 1/3332285
+)  ap881221,
+
+ational (national 31522		del(#, n): 5/730617
+, rational, 137			del(#, r): 28/1006731
+ atonal, 10			ins(t, i): 59/13741151
+ avional 0			sub(t, v): 2/13741151
+)
+sub(t, v)
+
+139340 words in dictionary
+
+for word in $(tr '[:upper:]' '[:lower:]' < ap881124 | tr -d '[:punct:]') ; do echo "$word"; done
+
+cat processed | grep -o fe | wc -l
+
+cat processed | grep ^feel$ | wc -l
+
+Parannusehdotus: punct sijasta regex poistamaan väliviivat vain sanojen ulkopuolelta...
+
+for word in $(cat ap* | tr '[:upper:]' '[:lower:]' | tr -d '[:punct:]') ; do echo "$word"; done | wc -l
+31991935 words in corpus
+
+
