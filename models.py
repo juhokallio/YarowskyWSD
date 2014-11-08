@@ -19,14 +19,22 @@ class Collocation:
         assert sense < len(self.senses), "No such sense"
         return (self.senses[sense] + self.E) / (self.count + self.E * len(self.senses))
 
-    def log_likelihood(self, sense):
+    def log_likelihood(self, sense=None):
+        if sense is None:
+            sense = self.best_sense()
         p_sense = self.p(sense)
-        return math.log(p_sense / (1 - p_sense), 2)
+        return abs(math.log(p_sense / (1 - p_sense), 2))
 
-    def plus(self, sense):
+    def best_sense(self):
+        m = max(self.senses)
+        for index, count in enumerate(self.senses):
+            if count == m:
+                return index
+
+    def plus(self, sense, amount=1):
         assert sense < len(self.senses), "No such sense"
-        self.senses[sense] += 1
-        self.count += 1
+        self.senses[sense] += amount
+        self.count += amount
         return self
 
     def get_sense_count(self, sense):
@@ -51,5 +59,25 @@ class TextCollocation(unittest.TestCase):
 
     def test_log_likelihood(self):
         collocation = Collocation("a", 0, 2)
+        collocation.plus(0, 31)
+        self.assertAlmostEqual(collocation.log_likelihood(0), 8.28, delta=0.01, msg="Wrong log likelihood with collocation with two senses")
+        self.assertAlmostEqual(collocation.log_likelihood(), 8.28, delta=0.01, msg="Wrong log likelihood with collocation with two senses")
+        self.assertEqual(collocation.count, 31)
+        collocation.plus(1)
+        self.assertEqual(collocation.count, 32)
+
+    def test_log_likelihood_three_senses(self):
+        collocation = Collocation("a", 0, 3)
+        collocation.plus(0).plus(1, 3)
+        self.assertAlmostEqual(collocation.log_likelihood(1), 1.36, delta=0.01, msg="Wrong log likelihood with collocation with three senses")
+        self.assertAlmostEqual(collocation.log_likelihood(), 1.36, delta=0.01, msg="Wrong log likelihood with collocation with three senses")
+
+    def test_best_sense(self):
+        collocation = Collocation("a", 0, 3)
+        collocation.plus(1)
+        self.assertEqual(collocation.best_sense(), 1)
         collocation.plus(0)
-        self.assertEqual(collocation.log_likelihood(0), 0, msg="Wrong log likelihood with collocation with two senses")
+        best = collocation.best_sense()
+        self.assertTrue(best == 0 or best == 1)
+        collocation.plus(0)
+        self.assertEqual(collocation.best_sense(), 0)
