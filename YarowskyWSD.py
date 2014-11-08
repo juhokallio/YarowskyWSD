@@ -42,8 +42,14 @@ def build_collocations(contexts_with_senses, pattern, k, sense_count):
                 add_collocation(word, 1, sense)
 
             if word_index == index - 2:
-                word_pair = (word, context[word_index + 1])
+                word_pair = (word, context[index - 1])
                 add_collocation(word_pair, 3, sense)
+            if word_index == index - 1 and len(context) >= index + 1:
+                word_pair = (word, context[index + 1])
+                add_collocation(word_pair, 4, sense)
+            if word_index == index + 1 and len(context) >= index + 2:
+                word_pair = (word, context[index + 2])
+                add_collocation(word_pair, 5, sense)
     return collocations
 
 
@@ -119,6 +125,8 @@ class TextExtraction(unittest.TestCase):
         self.assertTrue(("tutustumaan", 2) not in collocations)
         self.assertTrue(("tämän", 1) not in collocations)
         self.assertEqual(collocations[(("tutkimusongelmiin", "molekyylibiologiassa"), 3)].get_sense_count(0), 1)
+        self.assertEqual(collocations[(("molekyylibiologiassa", "opit"), 4)].get_sense_count(0), 1)
+        self.assertEqual(collocations[(("opit", "yleisiä"), 5)].get_sense_count(0), 1)
 
     def test_build_collocation_likelihoods(self):
         collocations = {
