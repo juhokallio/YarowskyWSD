@@ -12,14 +12,12 @@ class Collocation:
         self.words = words
         self.rule = rule
         self.senses = [0] * sense_count
-        self.count = 1
+        self.count = 0
 
     # Probability
     def p(self, sense):
-        if sense in self.senses:
-            return (self.senses[sense] + self.E) / (self.count + self.E * len(self.senses))
-        else:
-            raise Exception("No such sense")
+        assert sense < len(self.senses), "No such sense"
+        return (self.senses[sense] + self.E) / (self.count + self.E * len(self.senses))
 
     def log_likelihood(self, sense):
         p_sense = self.p(sense)
@@ -164,12 +162,14 @@ class TextExtractionTest(unittest.TestCase):
         self.assertEqual(collocations[(("tutkimusongelmiin", "molekyylibiologiassa"), 3)].get_sense_count(0), 1)
 
     def test_p(self):
-        collocation = Collocation("a", 0, 0)
-        self.assertEqual(collocation.p(0), 1)
-        self.assertEqual(collocation.p(1), 0)
+        collocation = Collocation("a", 0, 3)
+        collocation.plus(0)
+        self.assertAlmostEqual(collocation.p(0), 0.84, delta=0.01)
+        self.assertAlmostEqual(collocation.p(1), 0.08, delta=0.01)
         collocation.plus(0).plus(1).plus(2)
         self.assertAlmostEqual(collocation.p(0), 0.48, delta=0.01)
 
     def test_log_likelihood(self):
-        collocation = Collocation("a", 0, 1)
+        collocation = Collocation("a", 0, 2)
+        collocation.plus(0)
         self.assertEqual(collocation.log_likelihood(0), 0)
