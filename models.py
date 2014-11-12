@@ -43,6 +43,7 @@ class Collocation:
     def cmp(self, other):
         return cmp(other.log_likelihood(), self.log_likelihood())
 
+    # TODO: Refactor this ugly thing
     def has_match(self, context, index_of_pattern):
         for index, word in enumerate(context):
             if abs(index - index_of_pattern) > 1:
@@ -73,7 +74,7 @@ class Collocation:
         return hash((self.words, self.rule))
 
     def __eq__(self, other):
-        return (self.words, self.rule) == (other.words, other.rule)
+        return (self.words, self.rule, self.senses) == (other.words, other.rule, self.senses)
 
 
 class TextCollocation(unittest.TestCase):
@@ -85,6 +86,9 @@ class TextCollocation(unittest.TestCase):
         self.assertAlmostEqual(collocation.p(1), 0.08, delta=0.01, msg="Wrong probability with collocation with three senses")
         collocation.plus(0).plus(1).plus(2)
         self.assertAlmostEqual(collocation.p(0), 0.48, delta=0.01, msg="Wrong probability with collocation with three senses")
+        collocation = Collocation("a", 0, 2)
+        collocation.plus(1, 5).plus(0, 5)
+        self.assertEqual(collocation.p(0), 0.5, msg="Wrong probability with collocation with two same counts")
 
     def test_log_likelihood(self):
         collocation = Collocation("a", 0, 2)
@@ -94,6 +98,9 @@ class TextCollocation(unittest.TestCase):
         self.assertEqual(collocation.count, 31)
         collocation.plus(1)
         self.assertEqual(collocation.count, 32)
+        collocation = Collocation("a", 0, 2)
+        collocation.plus(1, 5).plus(0, 5)
+        self.assertAlmostEqual(collocation.log_likelihood(), 0, delta=0.01, msg="Wrong log likelihood with collocation with two same counts")
 
     def test_log_likelihood_three_senses(self):
         collocation = Collocation("a", 0, 3)

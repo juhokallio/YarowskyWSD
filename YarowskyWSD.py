@@ -1,6 +1,7 @@
 #coding: utf8
 
 import unittest
+import collections
 from models import Collocation
 from os import listdir
 
@@ -55,6 +56,7 @@ def build_collocations(contexts_with_senses, pattern, k, sense_count):
 
 
 def build_collocation_likelihoods(collocations):
+   # big_enough = [c for c in collocations.values() if c.log_likelihood() > THRESHOLD]
     return sorted(collocations.values(), lambda x,y: x.cmp(y))
 
 
@@ -90,26 +92,54 @@ def extract_contexts_from_folder(folder, pattern, k):
     return contexts
 
 
+# Minimum log likelihood for training contexts
+THRESHOLD = 5
+
+
 def classify(collocation_likelihoods, context, pattern, k):
     for c in collocation_likelihoods:
         index = index_of_pattern(context, pattern, k)
         if c.has_match(context, index):
-            return c.best_sense()
+            sense = c.best_sense()
+            if c.log_likelihood(sense) > THRESHOLD:
+                return sense
+            else:
+                return -1
+    return -1
 
 
 pattern = "plant"
-k = 10
-folder = "data"
+k = 5
+folder = "processed"
 contexts = extract_contexts_from_folder(folder, pattern, k)
-contexts_with_senses = init_context_list(contexts, ["life", "manufacturing"])
+contexts_with_senses = init_context_list(contexts, ["car", "life"])
 print "senses added"
 collocations = build_collocations(contexts_with_senses, pattern, k, 2)
 print "collocations created"
 collocation_likelihoods = build_collocation_likelihoods(collocations)
 print "collocations sorted, length: ", len(collocation_likelihoods)
-for i in range(0, 10):
-    print i + 1, collocation_likelihoods[i].log_likelihood(), collocation_likelihoods[i].rule, collocation_likelihoods[i].words, collocation_likelihoods[i].best_sense()
 
+for i in range(0, 1000):
+    print i, "iteration"
+    for i in range(0, 50):
+        print i + 1, collocation_likelihoods[i].log_likelihood(), collocation_likelihoods[i].rule, collocation_likelihoods[i].words, collocation_likelihoods[i].best_sense()
+    collocation_likelihoods = build_collocation_likelihoods(collocations)
+    print "sense 1", sum(1 for c in contexts_with_senses if c[1] == 0)
+    print "sense 2", sum(1 for c in contexts_with_senses if c[1] == 1)
+
+    contexts_with_senses = []
+    for index, context in enumerate(contexts):
+        sense = classify(collocation_likelihoods, context, pattern, k)
+        if sense is not -1:
+            contexts_with_senses.append((context, sense))
+
+    new_collocations = build_collocations(contexts_with_senses, pattern, k, 2)
+    if new_collocations == collocations:
+        for co in contexts_with_senses[:200]:
+            print co[1], co[0]
+        break
+    else:
+        collocations = new_collocations
 
 class TextExtraction(unittest.TestCase):
     longMessage = True
