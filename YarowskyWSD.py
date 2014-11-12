@@ -45,10 +45,10 @@ def build_collocations(contexts_with_senses, pattern, k, sense_count):
             if word_index == index - 2:
                 word_pair = (word, context[index - 1])
                 add_collocation(word_pair, 3, sense)
-            if word_index == index - 1 and len(context) >= index + 1:
+            if word_index == index - 1 and len(context) > index + 1:
                 word_pair = (word, context[index + 1])
                 add_collocation(word_pair, 4, sense)
-            if word_index == index + 1 and len(context) >= index + 2:
+            if word_index == index + 1 and len(context) > index + 2:
                 word_pair = (word, context[index + 2])
                 add_collocation(word_pair, 5, sense)
     return collocations
@@ -88,6 +88,13 @@ def extract_contexts_from_folder(folder, pattern, k):
         contexts.extend(extract_context_list(open(folder + "/" + f).read(), pattern, k))
         print "Contexts from the file", f, "extracted"
     return contexts
+
+
+def classify(collocation_likelihoods, context, pattern, k):
+    for c in collocation_likelihoods:
+        index = index_of_pattern(context, pattern, k)
+        if c.has_match(context, index):
+            return c.best_sense()
 
 
 pattern = "plant"

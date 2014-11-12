@@ -43,6 +43,32 @@ class Collocation:
     def cmp(self, other):
         return cmp(other.log_likelihood(), self.log_likelihood())
 
+    def has_match(self, context, index_of_pattern):
+        for index, word in enumerate(context):
+            if abs(index - index_of_pattern) > 1:
+                if word == self.words and self.rule == 2:
+                    return True
+            elif index == index_of_pattern + 1:
+                if word == self.words and self.rule == 0:
+                    return True
+            elif self.rule == 1:
+                if word == self.words and index == index_of_pattern - 1:
+                    return True
+
+            if index == index_of_pattern - 2:
+                word_pair = (word, context[index_of_pattern - 1])
+                if word_pair == self.words and self.rule == 3:
+                    return True
+            if index == index_of_pattern - 1 and len(context) > index_of_pattern + 1:
+                word_pair = (word, context[index_of_pattern + 1])
+                if word_pair == self.words and self.rule == 4:
+                    return True
+            if index == index_of_pattern + 1 and len(context) > index_of_pattern + 2:
+                word_pair = (word, context[index_of_pattern + 2])
+                if word_pair == self.words and self.rule == 5:
+                    return True
+        return False
+
     def __hash__(self):
         return hash((self.words, self.rule))
 
@@ -84,3 +110,24 @@ class TextCollocation(unittest.TestCase):
         self.assertTrue(best == 0 or best == 1)
         collocation.plus(0)
         self.assertEqual(collocation.best_sense(), 0)
+
+    def test_has_match(self):
+        collocation = Collocation("a", 0, 3)
+        self.assertTrue(collocation.has_match(["Test", "context", "is", "a", "nice"], 2))
+        collocation = Collocation("a", 1, 3)
+        self.assertTrue(collocation.has_match(["Test", "context", "is", "a", "nice"], 4))
+        collocation = Collocation("a", 2, 3)
+        self.assertTrue(collocation.has_match(["Test", "context", "is", "a", "nice"], 0))
+        self.assertTrue(collocation.has_match(["Test", "context", "is", "a", "nice"], 1))
+        self.assertFalse(collocation.has_match(["Test", "context", "is", "a", "nice"], 2))
+        self.assertFalse(collocation.has_match(["Test", "context", "is", "a", "nice"], 3))
+        self.assertFalse(collocation.has_match(["Test", "context", "is", "a", "nice"], 4))
+        collocation = Collocation(("context", "is"), 3, 3)
+        self.assertTrue(collocation.has_match(["Test", "context", "is", "a", "nice"], 3))
+        self.assertFalse(collocation.has_match(["Test", "context", "is", "a", "nice"], 4))
+        collocation = Collocation(("is", "nice"), 4, 3)
+        self.assertTrue(collocation.has_match(["Test", "context", "is", "a", "nice"], 3))
+        self.assertFalse(collocation.has_match(["Test", "context", "is", "a", "nice"], 4))
+        collocation = Collocation(("a", "nice"), 5, 3)
+        self.assertTrue(collocation.has_match(["Test", "context", "is", "a", "nice"], 2))
+        self.assertFalse(collocation.has_match(["Test", "context", "is", "a", "nice"], 1))
