@@ -2,6 +2,7 @@ __author__ = 'juka'
 
 import math
 import unittest
+from rules import RULES
 
 
 class Collocation:
@@ -43,32 +44,8 @@ class Collocation:
     def cmp(self, other):
         return cmp(other.log_likelihood(), self.log_likelihood())
 
-    # TODO: Refactor this ugly thing
     def has_match(self, context, index_of_pattern):
-        for index, word in enumerate(context):
-            if abs(index - index_of_pattern) > 1:
-                if word == self.words and self.rule == 2:
-                    return True
-            elif index == index_of_pattern + 1:
-                if word == self.words and self.rule == 0:
-                    return True
-            elif self.rule == 1:
-                if word == self.words and index == index_of_pattern - 1:
-                    return True
-
-            if index == index_of_pattern - 2:
-                word_pair = (word, context[index_of_pattern - 1])
-                if word_pair == self.words and self.rule == 3:
-                    return True
-            if index == index_of_pattern - 1 and len(context) > index_of_pattern + 1:
-                word_pair = (word, context[index_of_pattern + 1])
-                if word_pair == self.words and self.rule == 4:
-                    return True
-            if index == index_of_pattern + 1 and len(context) > index_of_pattern + 2:
-                word_pair = (word, context[index_of_pattern + 2])
-                if word_pair == self.words and self.rule == 5:
-                    return True
-        return False
+        return RULES[self.rule](context, index_of_pattern, self.words)
 
     def __hash__(self):
         return hash((self.words, self.rule))
