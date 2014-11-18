@@ -3,11 +3,16 @@ __author__ = 'juka'
 import math
 import unittest
 from rules import RULES
+from utils import index_of_pattern
+
+
+# Minimum log likelihood for training contexts
+THRESHOLD = 4.5
 
 
 class Collocation:
     # Epsilon
-    E = 0.1
+    E = 0.9
 
     def __init__(self, words, rule, sense_count):
         self.words = words
@@ -18,7 +23,10 @@ class Collocation:
     # Probability
     def p(self, sense):
         assert sense < len(self.senses), "No such sense"
-        return (self.senses[sense] + self.E) / (self.count + self.E * len(self.senses))
+        p = (self.senses[sense] + self.E) / (self.count + self.E * len(self.senses))
+        if p == 1:
+            print "Paha paha: ", self.senses[sense], self.E, self.count, len(self.senses)
+        return p
 
     def log_likelihood(self, sense=None):
         if sense is None:
@@ -52,6 +60,59 @@ class Collocation:
 
     def __eq__(self, other):
         return (self.words, self.rule, self.senses) == (other.words, other.rule, self.senses)
+
+
+class Context:
+
+    def __init__(self, text, sense=-1, document=None):
+        self.text = text
+        self.sense = sense
+        self.document = document
+
+    def has_sense(self):
+        return self.sense is not -1
+
+    def classify(self, collocations, pattern, k):
+        for c in collocations:
+            index = index_of_pattern(self.text, pattern, k)
+            if c.has_match(self.text, index):
+                sense = c.best_sense()
+                if c.log_likelihood(sense) > THRESHOLD:
+                    self.sense = sense
+                else:
+                    self.sense = -1
+        self.sense = -1
+
+    def update_collocations(self, collocations, pattern, k, sense_count):
+        # 0: Word immediately to the right
+        # 1:
+        #
+        if not self.has_sense():
+            return
+
+        def add_collocation(words, rule, sense):
+            if (words, rule) not in collocations:
+                collocations[(words, rule)] = Collocation(words, rule, sense_count)
+            collocations[(words, rule)].plus(sense)
+
+        index = index_of_pattern(self.text, pattern, k)
+        for word_index, word in enumerate(self.text):
+            if abs(word_index - index) > 1:
+                add_collocation(word, 2, self.sense)
+            elif word_index == index + 1:
+                add_collocation(word, 0, self.sense)
+            elif word_index == index - 1:
+                add_collocation(word, 1, self.sense)
+
+            if word_index == index - 2:
+                word_pair = (word, self.text[index - 1])
+                add_collocation(word_pair, 3, self.sense)
+            if word_index == index - 1 and len(self.text) > index + 1:
+                word_pair = (word, self.text[index + 1])
+                add_collocation(word_pair, 4, self.sense)
+            if word_index == index + 1 and len(self.text) > index + 2:
+                word_pair = (word, self.text[index + 2])
+                add_collocation(word_pair, 5, self.sense)
 
 
 class TextCollocation(unittest.TestCase):
