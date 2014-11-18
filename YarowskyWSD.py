@@ -65,8 +65,10 @@ def build_collocation_likelihoods(collocations):
 def index_of_pattern(context, pattern, k):
     for index, value in enumerate(context):
         if value == pattern:
+            last_match = index
             if len(context) - index - 1 == k or index == k:
                 return index
+    return last_match
 
 
 def extract_context_list(text, pattern, k):
