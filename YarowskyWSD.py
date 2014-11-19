@@ -1,74 +1,28 @@
 #coding: utf8
 
 import unittest
-import collections
-from models import Collocation
+from models import Collocation, Context
 from os import listdir
 
 
 def init_context_list(contexts, seeds):
-    def classify(context):
+    for context in contexts:
         for index, seed in enumerate(seeds):
-            if seed in context:
+            if seed in context.text:
                 # Sense is the index of the fitting seed
-                return context, index
-        # Unknown sense
-        return context, -1
-
-    return map(classify, contexts)
+                context.sense = index
 
 
-def build_collocations(contexts_with_senses, pattern, k, sense_count):
-    # 0: Word immediately to the right
-    # 1:
-    #
+def build_collocations(contexts, pattern, k, sense_count):
     collocations = {}
-
-    def add_collocation(words, rule, sense):
-        if (words, rule) not in collocations:
-            collocations[(words, rule)] = Collocation(words, rule, sense_count)
-        collocations[(words, rule)].plus(sense)
-
-    for context_with_sense in contexts_with_senses:
-        context = context_with_sense[0]
-        sense = context_with_sense[1]
-        if sense == -1:
-            continue
-        index = index_of_pattern(context, pattern, k)
-        for word_index, word in enumerate(context):
-            if abs(word_index - index) > 1:
-                add_collocation(word, 2, sense)
-            elif word_index == index + 1:
-                add_collocation(word, 0, sense)
-            elif word_index == index - 1:
-                add_collocation(word, 1, sense)
-
-            if word_index == index - 2:
-                word_pair = (word, context[index - 1])
-                add_collocation(word_pair, 3, sense)
-            if word_index == index - 1 and len(context) > index + 1:
-                word_pair = (word, context[index + 1])
-                add_collocation(word_pair, 4, sense)
-            if word_index == index + 1 and len(context) > index + 2:
-                word_pair = (word, context[index + 2])
-                add_collocation(word_pair, 5, sense)
+    for context in contexts:
+        context.update_collocations(collocations, pattern, k, sense_count)
     return collocations
 
 
 def build_collocation_likelihoods(collocations):
    # big_enough = [c for c in collocations.values() if c.log_likelihood() > THRESHOLD]
     return sorted(collocations.values(), lambda x,y: x.cmp(y))
-
-
-# Currently doesn't take account repeating patterns in the end or beginning of corpus.
-# Flag based approach should fix this, but gains are minimal.
-def index_of_pattern(context, pattern, k):
-    for index, value in enumerate(context):
-        if value == pattern:
-            last_match = index
-            if len(context) - index - 1 == k or index == k:
-                return index
-    return last_match
 
 
 def extract_context_list(text, pattern, k):
@@ -78,7 +32,7 @@ def extract_context_list(text, pattern, k):
         if word == pattern:
             begin = max(index - k, 0)
             end = min(index + k + 1, len(words))
-            contexts.append(words[begin:end])
+            contexts.append(Context(words[begin:end]))
     return contexts
 
 def extract_contexts_from_file(file_name):
@@ -88,60 +42,54 @@ def extract_contexts_from_file(file_name):
 
 def extract_contexts_from_folder(folder, pattern, k):
     contexts = []
+    i = 1
     for f in listdir(folder):
         contexts.extend(extract_context_list(open(folder + "/" + f).read(), pattern, k))
-        print "Contexts from the file", f, "extracted"
+        # print "Contexts from the file", f, "extracted"
+        if i % 1000 == 0:
+            print i
+        i += 1
     return contexts
 
 
-# Minimum log likelihood for training contexts
-THRESHOLD = 5
-
-
-def classify(collocation_likelihoods, context, pattern, k):
-    for c in collocation_likelihoods:
-        index = index_of_pattern(context, pattern, k)
-        if c.has_match(context, index):
-            sense = c.best_sense()
-            if c.log_likelihood(sense) > THRESHOLD:
-                return sense
-            else:
-                return -1
-    return -1
-
-
-pattern = "plant"
-k = 5
-folder = "processed"
-contexts = extract_contexts_from_folder(folder, pattern, k)
-contexts_with_senses = init_context_list(contexts, ["car", "life"])
-print "senses added"
-collocations = build_collocations(contexts_with_senses, pattern, k, 2)
-print "collocations created"
-collocation_likelihoods = build_collocation_likelihoods(collocations)
-print "collocations sorted, length: ", len(collocation_likelihoods)
-
-for i in range(0, 1000):
-    print i, "iteration"
-    for i in range(0, 50):
-        print i + 1, collocation_likelihoods[i].log_likelihood(), collocation_likelihoods[i].rule, collocation_likelihoods[i].words, collocation_likelihoods[i].best_sense()
+def run():
+    pattern = "space"
+    k = 30
+    folder = "ap-singles"
+    collocationsLog = "collocations.log"
+    contexts = extract_contexts_from_folder(folder, pattern, k)
+    contexts_with_senses = init_context_list(contexts, ["planet", "living"])
+    print "senses added"
+    collocations = build_collocations(contexts_with_senses, pattern, k, 2)
+    print "collocations created"
     collocation_likelihoods = build_collocation_likelihoods(collocations)
-    print "sense 1", sum(1 for c in contexts_with_senses if c[1] == 0)
-    print "sense 2", sum(1 for c in contexts_with_senses if c[1] == 1)
+    print "collocations sorted, length: ", len(collocation_likelihoods)
 
-    contexts_with_senses = []
-    for index, context in enumerate(contexts):
-        sense = classify(collocation_likelihoods, context, pattern, k)
-        if sense is not -1:
-            contexts_with_senses.append((context, sense))
+    for i in range(0, 1000):
+        print i, "iteration"
+        for i in range(0, 50):
+            print i + 1, collocation_likelihoods[i].log_likelihood(), collocation_likelihoods[i].rule, collocation_likelihoods[i].words, collocation_likelihoods[i].best_sense()
+        collocation_likelihoods = build_collocation_likelihoods(collocations)
+        print "sense 1", sum(1 for c in contexts_with_senses if c[1] == 0)
+        print "sense 2", sum(1 for c in contexts_with_senses if c[1] == 1)
 
-    new_collocations = build_collocations(contexts_with_senses, pattern, k, 2)
-    if new_collocations == collocations:
-        for co in contexts_with_senses[:200]:
-            print co[1], co[0]
-        break
-    else:
-        collocations = new_collocations
+        classified_contexts = []
+        for index, context in enumerate(contexts):
+            context.classify(collocation_likelihoods, pattern, k)
+            if context.has_sense():
+                classified_contexts.append(context)
+
+        new_collocations = build_collocations(contexts_with_senses, pattern, k, 2)
+        if new_collocations == collocations:
+            for co in contexts_with_senses[:200]:
+                print co.sense, co.text
+            break
+        else:
+            collocations = new_collocations
+
+    f = open(collocationsLog, "w")
+    f.write(collocations)
+    f.close()
 
 class TextExtraction(unittest.TestCase):
     longMessage = True
@@ -151,38 +99,32 @@ class TextExtraction(unittest.TestCase):
         k = 10
         context_list = extract_context_list(self.TEXT, "biologisia", k)
         self.assertEqual(len(context_list), 1, msg="Wrong number of matching contexts found")
+
         context_list = extract_context_list(self.TEXT, "molekyylibiologian", k)
-        self.assertEqual(context_list[0][-1], "kursseja.")
+        self.assertEqual(context_list[0].text[-1], "kursseja.")
+
         context_list = extract_context_list(self.TEXT, "koneoppimisen", k)
-        self.assertEqual(len(context_list[0]), 2 * k + 1)
+        self.assertEqual(len(context_list[0].text), 2 * k + 1)
+
         context_list = extract_context_list(self.TEXT, "ammattilaisia,", 2)
-        self.assertEqual(context_list[0][-1], "kykenevät")
-        self.assertEqual(context_list[0][0], "kouluttaa")
+        self.assertEqual(context_list[0].text[-1], "kykenevät")
+        self.assertEqual(context_list[0].text[0], "kouluttaa")
 
     def test_init_context_list(self):
         k = 3
         context_list = extract_context_list(self.TEXT, "ammattilaisia,", k)
-        self.assertEqual(len(context_list[0]), 2 * k + 1)
-        context_list = init_context_list(context_list, ["kissa", "kouluttaa"])
-        self.assertEqual(len(context_list[0][0]), 2 * k + 1)
-        self.assertEqual(context_list[0][1], 1)
-
-    def test_index_of_pattern(self):
-        pattern = "ja"
-        context = ["a", pattern, "b"]
-        self.assertEqual(index_of_pattern(context, pattern, 1), 1)
-        context = [pattern, "b"]
-        self.assertEqual(index_of_pattern(context, pattern, 1), 0)
-        context = ["a", pattern, pattern, "b", "c"]
-        self.assertEqual(index_of_pattern(context, pattern, 2), 2)
+        self.assertEqual(len(context_list[0].text), 2 * k + 1)
+        init_context_list(context_list, ["kissa", "kouluttaa"])
+        self.assertEqual(len(context_list[0].text), 2 * k + 1)
+        self.assertEqual(context_list[0].sense, 1)
 
     def test_build_collocations(self):
         k = 5
         pattern = "ja"
         context_list = extract_context_list(self.TEXT, pattern, k)
-        self.assertEqual(context_list[0].count(pattern), 2)
+        self.assertEqual(context_list[0].text.count(pattern), 2)
         senses = ["yleisiä"]
-        context_list = init_context_list(context_list, senses)
+        init_context_list(context_list, senses)
         collocations = build_collocations(context_list, pattern, k, len(senses))
         self.assertEqual(collocations["opit", 0].get_sense_count(0), 1)
         self.assertEqual(collocations["menetelmiä", 0].get_sense_count(0), 1)
