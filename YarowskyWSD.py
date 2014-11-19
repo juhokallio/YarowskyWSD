@@ -1,8 +1,12 @@
 #coding: utf8
 
 import unittest
+import string
 from models import Collocation, Context
 from os import listdir
+
+
+table = string.maketrans("","")
 
 
 def init_context_list(contexts, seeds):
@@ -39,7 +43,9 @@ def split_to_articles(text):
         elif word == END:
             articles.append(article)
         else:
-            article.append(word)
+            #Remove punctuation
+            stripped = word.translate(table, string.punctuation)
+            article.append(stripped)
     print len(articles), "articles collected"
     return articles
 
