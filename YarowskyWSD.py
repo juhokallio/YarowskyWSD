@@ -25,42 +25,54 @@ def build_collocation_likelihoods(collocations):
     return sorted(collocations.values(), lambda x,y: x.cmp(y))
 
 
-def extract_context_list(text, pattern, k):
+BEGIN = "<TEXT>"
+END = "</TEXT>"
+
+
+def split_to_articles(text):
     words = text.split()
+    articles = []
+    article = []
+    for word in words:
+        if word == BEGIN:
+            article = []
+        elif word == END:
+            articles.append(article)
+        else:
+            article.append(word)
+    print len(articles), "articles collected"
+    return articles
+
+
+def extract_context_list(article, pattern, k):
     contexts = []
-    for index, word in enumerate(words):
+    for index, word in enumerate(article):
+
         if word == pattern:
             begin = max(index - k, 0)
-            end = min(index + k + 1, len(words))
-            contexts.append(Context(words[begin:end]))
+            end = min(index + k + 1, len(article))
+            contexts.append(Context(article[begin:end]))
     return contexts
-
-def extract_contexts_from_file(file_name):
-    txt = open(file_name)
-    print txt.read()
 
 
 def extract_contexts_from_folder(folder, pattern, k):
     contexts = []
-    i = 1
     for f in listdir(folder):
-        contexts.extend(extract_context_list(open(folder + "/" + f).read(), pattern, k))
-        # print "Contexts from the file", f, "extracted"
-        if i % 1000 == 0:
-            print i
-        i += 1
+        articles = split_to_articles(open(folder + "/" + f).read())
+        for article in articles:
+            contexts.extend(extract_context_list(article, pattern, k))
+        print len(contexts), "contexts from the file", f, "extracted"
     return contexts
 
 
-def run():
-    pattern = "space"
-    k = 30
-    folder = "ap-singles"
-    collocationsLog = "collocations.log"
+def run(pattern, seeds, k):
+    folder = "data"
+    collocations_log = "collocations.log"
     contexts = extract_contexts_from_folder(folder, pattern, k)
-    contexts_with_senses = init_context_list(contexts, ["planet", "living"])
+    print "contexts collected", len(contexts)
+    init_context_list(contexts, seeds)
     print "senses added"
-    collocations = build_collocations(contexts_with_senses, pattern, k, 2)
+    collocations = build_collocations(contexts, pattern, k, 2)
     print "collocations created"
     collocation_likelihoods = build_collocation_likelihoods(collocations)
     print "collocations sorted, length: ", len(collocation_likelihoods)
@@ -70,8 +82,8 @@ def run():
         for i in range(0, 50):
             print i + 1, collocation_likelihoods[i].log_likelihood(), collocation_likelihoods[i].rule, collocation_likelihoods[i].words, collocation_likelihoods[i].best_sense()
         collocation_likelihoods = build_collocation_likelihoods(collocations)
-        print "sense 1", sum(1 for c in contexts_with_senses if c[1] == 0)
-        print "sense 2", sum(1 for c in contexts_with_senses if c[1] == 1)
+        print "sense 1", sum(1 for c in contexts if c.sense == 0)
+        print "sense 2", sum(1 for c in contexts if c.sense == 1)
 
         classified_contexts = []
         for index, context in enumerate(contexts):
@@ -79,40 +91,47 @@ def run():
             if context.has_sense():
                 classified_contexts.append(context)
 
-        new_collocations = build_collocations(contexts_with_senses, pattern, k, 2)
+        print len(classified_contexts), "contexts classified"
+
+        new_collocations = build_collocations(classified_contexts, pattern, k, 2)
         if new_collocations == collocations:
-            for co in contexts_with_senses[:200]:
+            for co in classified_contexts[:200]:
                 print co.sense, co.text
             break
         else:
             collocations = new_collocations
 
-    f = open(collocationsLog, "w")
-    f.write(collocations)
+    f = open(collocations_log, "w")
+    f.write("asdf")
     f.close()
+
+
+run("space", ["planet", "living"], 15)
+
 
 class TextExtraction(unittest.TestCase):
     longMessage = True
     TEXT = "Erikoistumislinja kouluttaa bioinformatiikan ammattilaisia, jotka kykenevät ymmärtämään biologisia kysymyksenasetteluja laskennallisina haasteina.  Erikoistumislinjan opiskelijana tulet tutustumaan tämän hetken kuumimpiin tutkimusongelmiin molekyylibiologiassa ja opit yleisiä periaatteita ja menetelmiä laskennallisten ongelmien mallintamiseen ja ratkaisuun. Algoritmien ja koneoppimisen perusteiden lisäksi, tutkintoon kuuluu biologiselle datalle räätälöityjä laskennallisia menetelmiä, sekä valinnaisten opintojen kautta tutkinto antaa mahdollisuuden sisällyttää opintoihin varsinaisia molekyylibiologian ja muiden lähialojen kursseja."
+    ARTICLE = TEXT.split()
 
     def test_extract_context_list(self):
         k = 10
-        context_list = extract_context_list(self.TEXT, "biologisia", k)
+        context_list = extract_context_list(self.ARTICLE, "biologisia", k)
         self.assertEqual(len(context_list), 1, msg="Wrong number of matching contexts found")
 
-        context_list = extract_context_list(self.TEXT, "molekyylibiologian", k)
+        context_list = extract_context_list(self.ARTICLE, "molekyylibiologian", k)
         self.assertEqual(context_list[0].text[-1], "kursseja.")
 
-        context_list = extract_context_list(self.TEXT, "koneoppimisen", k)
+        context_list = extract_context_list(self.ARTICLE, "koneoppimisen", k)
         self.assertEqual(len(context_list[0].text), 2 * k + 1)
 
-        context_list = extract_context_list(self.TEXT, "ammattilaisia,", 2)
+        context_list = extract_context_list(self.ARTICLE, "ammattilaisia,", 2)
         self.assertEqual(context_list[0].text[-1], "kykenevät")
         self.assertEqual(context_list[0].text[0], "kouluttaa")
 
     def test_init_context_list(self):
         k = 3
-        context_list = extract_context_list(self.TEXT, "ammattilaisia,", k)
+        context_list = extract_context_list(self.ARTICLE, "ammattilaisia,", k)
         self.assertEqual(len(context_list[0].text), 2 * k + 1)
         init_context_list(context_list, ["kissa", "kouluttaa"])
         self.assertEqual(len(context_list[0].text), 2 * k + 1)
@@ -121,7 +140,7 @@ class TextExtraction(unittest.TestCase):
     def test_build_collocations(self):
         k = 5
         pattern = "ja"
-        context_list = extract_context_list(self.TEXT, pattern, k)
+        context_list = extract_context_list(self.ARTICLE, pattern, k)
         self.assertEqual(context_list[0].text.count(pattern), 2)
         senses = ["yleisiä"]
         init_context_list(context_list, senses)

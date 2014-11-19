@@ -7,12 +7,12 @@ from utils import index_of_pattern
 
 
 # Minimum log likelihood for training contexts
-THRESHOLD = 4.5
+THRESHOLD = 3.5
 
 
 class Collocation:
     # Epsilon
-    E = 0.9
+    E = 0.5
 
     def __init__(self, words, rule, sense_count):
         self.words = words
@@ -24,8 +24,8 @@ class Collocation:
     def p(self, sense):
         assert sense < len(self.senses), "No such sense"
         p = (self.senses[sense] + self.E) / (self.count + self.E * len(self.senses))
-        if p == 1:
-            print "Paha paha: ", self.senses[sense], self.E, self.count, len(self.senses)
+        assert p < 1, "Probability should never be 1"
+        assert p > 0, "Probability should never be 0"
         return p
 
     def log_likelihood(self, sense=None):
@@ -81,6 +81,7 @@ class Context:
                     self.sense = sense
                 else:
                     self.sense = -1
+                return
         self.sense = -1
 
     def update_collocations(self, collocations, pattern, k, sense_count):
