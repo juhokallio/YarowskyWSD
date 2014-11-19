@@ -44,8 +44,8 @@ def split_to_articles(text):
             articles.append(article)
             article = []
         else:
-            #Remove punctuation
-            stripped = word.translate(table, string.punctuation)
+            #Remove punctuation, lower case
+            stripped = word.translate(table, string.punctuation).lower()
             article.append(stripped)
     print len(articles), "articles collected"
     return articles
