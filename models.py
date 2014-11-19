@@ -7,12 +7,12 @@ from utils import index_of_pattern
 
 
 # Minimum log likelihood for training contexts
-THRESHOLD = 3.5
+THRESHOLD = 5
 
 
 class Collocation:
     # Epsilon
-    E = 0.5
+    E = 0.25
 
     def __init__(self, words, rule, sense_count):
         self.words = words
@@ -114,6 +114,11 @@ class Context:
             if word_index == index + 1 and len(self.text) > index + 2:
                 word_pair = (word, self.text[index + 2])
                 add_collocation(word_pair, 5, self.sense)
+
+
+class Document:
+    def __init__(self):
+        self.contexts = []
 
 
 class TextCollocation(unittest.TestCase):

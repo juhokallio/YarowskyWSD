@@ -2,7 +2,7 @@
 
 import unittest
 import string
-from models import Collocation, Context
+from models import Collocation, Context, Document
 from os import listdir
 
 
@@ -53,12 +53,12 @@ def split_to_articles(text):
 
 def extract_context_list(article, pattern, k):
     contexts = []
+    document = Document()
     for index, word in enumerate(article):
-
         if word == pattern:
             begin = max(index - k, 0)
             end = min(index + k + 1, len(article))
-            contexts.append(Context(article[begin:end]))
+            contexts.append(Context(article[begin:end], document=document))
     return contexts
 
 
@@ -66,8 +66,10 @@ def extract_contexts_from_folder(folder, pattern, k):
     contexts = []
     for f in listdir(folder):
         articles = split_to_articles(open(folder + "/" + f).read())
+        document_id = 0
         for article in articles:
             contexts.extend(extract_context_list(article, pattern, k))
+            document_id += 1
         print len(contexts), "contexts from the file", f, "extracted"
     return contexts
 
@@ -88,7 +90,7 @@ def run(pattern, seeds, k):
         print i, "iteration"
         for i in range(0, 50):
             print i + 1, collocation_likelihoods[i].log_likelihood(), collocation_likelihoods[i].rule, collocation_likelihoods[i].words, collocation_likelihoods[i].best_sense()
-        collocation_likelihoods = build_collocation_likelihoods(collocations)
+
         print "sense 1", sum(1 for c in contexts if c.sense == 0)
         print "sense 2", sum(1 for c in contexts if c.sense == 1)
 
@@ -101,6 +103,7 @@ def run(pattern, seeds, k):
         print len(classified_contexts), "contexts classified"
 
         new_collocations = build_collocations(classified_contexts, pattern, k, 2)
+        new_collocations = build_collocation_likelihoods(new_collocations)
         if new_collocations == collocations:
             for co in classified_contexts[:200]:
                 print co.sense, co.text
@@ -109,11 +112,14 @@ def run(pattern, seeds, k):
             collocations = new_collocations
 
     f = open(collocations_log, "w")
-    f.write("asdf")
+    for i, c in enumerate(collocations):
+        line = "{} {} {} {} {}\n".format(i + 1, c.log_likelihood(), c.rule, c.words, c.best_sense())
+        f.write(line)
+
     f.close()
 
 
-run("space", ["planet", "living"], 15)
+run("tank", ["army", "gallons"], 15)
 
 
 class TextExtraction(unittest.TestCase):
