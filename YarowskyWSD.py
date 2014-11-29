@@ -2,31 +2,41 @@
 
 import unittest
 import string
-from models import Collocation, Context, Document
 from os import listdir
+from models import Collocation, Context, Document
+from utils import index_of_pattern
 
+# Minimum log-likelihood ratio that causes a context to get classified.
+THRESHOLD = 3.9
 
 table = string.maketrans("","")
 
 
-def init_context_list(contexts, seeds):
+def init_classified_contexts(contexts, seeds):
+    classified_contexts = []
     for context in contexts:
         for index, seed in enumerate(seeds):
             if seed in context.text:
                 # Sense is the index of the fitting seed
                 context.sense = index
+                classified_contexts.append(context)
+    return classified_contexts
 
-
-def build_collocations(contexts, pattern, k, sense_count):
-    collocations = {}
+def build_words_and_rule_to_collocations_map(contexts, pattern, k, sense_count):
+    words_and_rule_to_collocations = {}
     for context in contexts:
-        context.update_collocations(collocations, pattern, k, sense_count)
-    return collocations
+        context.update_collocations(words_and_rule_to_collocations, pattern, k, sense_count)
+    return words_and_rule_to_collocations
 
-
-def build_collocation_likelihoods(collocations):
+#
+# Function get_sorted_collocations
+#
+# Takes as input a words-and-rules-to-collocations map and returns a list of collocations
+# sorted by log-likelihood ratio.
+#
+def get_sorted_collocations(words_and_rule_to_collocations):
    # big_enough = [c for c in collocations.values() if c.log_likelihood() > THRESHOLD]
-    return sorted(collocations.values(), lambda x,y: x.cmp(y))
+    return sorted(words_and_rule_to_collocations.values(), lambda x,y: x.cmp(y))
 
 
 BEGIN = "<TEXT>"
@@ -47,7 +57,7 @@ def split_to_articles(text):
             #Remove punctuation, lower case
             stripped = word.translate(table, string.punctuation).lower()
             article.append(stripped)
-    print len(articles), "articles collected"
+    # print len(articles), "articles collected"
     return articles
 
 
@@ -70,56 +80,81 @@ def extract_contexts_from_folder(folder, pattern, k):
         for article in articles:
             contexts.extend(extract_context_list(article, pattern, k))
             document_id += 1
-        print len(contexts), "contexts from the file", f, "extracted"
+        # print len(contexts), "contexts from the file", f, "extracted"
     return contexts
 
 
+def classify(context, collocations, pattern, k, threshold):
+    for collocation in collocations:
+        index = index_of_pattern(context.text, pattern, k)
+        if collocation.has_match(context.text, index):
+            sense = collocation.best_sense()
+            if collocation.log_likelihood(sense) > threshold:
+                context.sense = sense
+            else:
+                context.sense = -1
+            return
+    context.sense = -1
+
+
+#
+# Function: run
+#
+# Runs Yarowsky's word sense disambiguation algorithm.
+#
+# Parameters:
+#   pattern: A word with multiple senses.
+#   seeds:   Seed words for the algorithm, one for each sense. Should be semantically or otherwise related to the
+#            corresponding senses.
+#   k:       The number of words to left and right from a pattern occurrence that the algorithm notices when
+#            looking for words that occur in the same environment with the pattern.
+#
 def run(pattern, seeds, k):
     folder = "data"
-    collocations_log = "collocations.log"
+    log_filename = "collocations.log"
+    print "Reading data..."
     contexts = extract_contexts_from_folder(folder, pattern, k)
-    print "contexts collected", len(contexts)
-    init_context_list(contexts, seeds)
-    print "senses added"
-    collocations = build_collocations(contexts, pattern, k, 2)
-    print "collocations created"
-    collocation_likelihoods = build_collocation_likelihoods(collocations)
-    print "collocations sorted, length: ", len(collocation_likelihoods)
+    classified_contexts = init_classified_contexts(contexts, seeds)
+    words_and_rule_to_collocations = build_words_and_rule_to_collocations_map(classified_contexts, pattern, k, 2)
+    collocations = get_sorted_collocations(words_and_rule_to_collocations)
 
     for i in range(0, 1000):
         print i, "iteration"
-        for i in range(0, 50):
-            print i + 1, collocation_likelihoods[i].log_likelihood(), collocation_likelihoods[i].rule, collocation_likelihoods[i].words, collocation_likelihoods[i].best_sense()
+        for j in range(0, 80):
+            print j + 1, collocations[j].log_likelihood(), collocations[j].rule, collocations[j].words, collocations[j].best_sense(), "[", collocations[j].senses[0], ", ", collocations[j].senses[1], "]"
 
         print "sense 1", sum(1 for c in contexts if c.sense == 0)
         print "sense 2", sum(1 for c in contexts if c.sense == 1)
+        print "not classified", sum(1 for c in contexts if c.sense == -1)
 
         classified_contexts = []
         for index, context in enumerate(contexts):
-            context.classify(collocation_likelihoods, pattern, k)
+            classify(context, collocations, pattern, k, THRESHOLD)
             if context.has_sense():
                 classified_contexts.append(context)
 
         print len(classified_contexts), "contexts classified"
+        # for co in classified_contexts:
+        #         print co.sense, co.text
 
-        new_collocations = build_collocations(classified_contexts, pattern, k, 2)
-        new_collocations = build_collocation_likelihoods(new_collocations)
+        new_words_and_rule_to_collocations = build_words_and_rule_to_collocations_map(classified_contexts, pattern, k, 2)
+        new_collocations = get_sorted_collocations(new_words_and_rule_to_collocations)
         if new_collocations == collocations:
-            for co in classified_contexts[:200]:
-                print co.sense, co.text
+            # for co in classified_contexts[:200]:
+            #     print co.sense, co.text
             break
         else:
             collocations = new_collocations
 
-    f = open(collocations_log, "w")
-    for i, c in enumerate(collocations):
-        line = "{} {} {} {} {}\n".format(i + 1, c.log_likelihood(), c.rule, c.words, c.best_sense())
-        f.write(line)
+    log = open(log_filename, "w")
+    for k, c in enumerate(collocations):
+        line = "{} {} {} {} {}\n".format(k + 1, c.log_likelihood(), c.rule, c.words, c.best_sense())
+        log.write(line)
 
-    f.close()
+    log.close()
 
 
-run("tank", ["army", "gallons"], 15)
+run("bass", ["fish", "player"], 10)
 
 
 class TextExtraction(unittest.TestCase):
@@ -146,7 +181,7 @@ class TextExtraction(unittest.TestCase):
         k = 3
         context_list = extract_context_list(self.ARTICLE, "ammattilaisia,", k)
         self.assertEqual(len(context_list[0].text), 2 * k + 1)
-        init_context_list(context_list, ["kissa", "kouluttaa"])
+        init_classified_contexts(context_list, ["kissa", "kouluttaa"])
         self.assertEqual(len(context_list[0].text), 2 * k + 1)
         self.assertEqual(context_list[0].sense, 1)
 
@@ -156,8 +191,8 @@ class TextExtraction(unittest.TestCase):
         context_list = extract_context_list(self.ARTICLE, pattern, k)
         self.assertEqual(context_list[0].text.count(pattern), 2)
         senses = ["yleisiä"]
-        init_context_list(context_list, senses)
-        collocations = build_collocations(context_list, pattern, k, len(senses))
+        init_classified_contexts(context_list, senses)
+        collocations = build_words_and_rule_to_collocations_map(context_list, pattern, k, len(senses))
         self.assertEqual(collocations["opit", 0].get_sense_count(0), 1)
         self.assertEqual(collocations["menetelmiä", 0].get_sense_count(0), 1)
         self.assertEqual(collocations["tämän", 2].get_sense_count(0), 1)
@@ -177,7 +212,7 @@ class TextExtraction(unittest.TestCase):
             ("foo", 2): Collocation("foo", 0, 2).plus(1, 20),
             (("bar", "bar2"), 3): Collocation(("bar", "bar2"), 0, 2).plus(1, 10),
         }
-        collocation_likelihoods = build_collocation_likelihoods(collocations)
+        collocation_likelihoods = get_sorted_collocations(collocations)
         self.assertEqual(collocation_likelihoods[0].words, "paras")
         self.assertEqual(collocation_likelihoods[1].words, "foo")
         self.assertEqual(collocation_likelihoods[2].words, ("bar", "bar2"))

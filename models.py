@@ -5,14 +5,9 @@ import unittest
 from rules import RULES
 from utils import index_of_pattern
 
-
-# Minimum log likelihood for training contexts
-THRESHOLD = 5
-
-
 class Collocation:
     # Epsilon
-    E = 0.25
+    E = 0.2
 
     def __init__(self, words, rule, sense_count):
         self.words = words
@@ -71,18 +66,6 @@ class Context:
 
     def has_sense(self):
         return self.sense is not -1
-
-    def classify(self, collocations, pattern, k):
-        for c in collocations:
-            index = index_of_pattern(self.text, pattern, k)
-            if c.has_match(self.text, index):
-                sense = c.best_sense()
-                if c.log_likelihood(sense) > THRESHOLD:
-                    self.sense = sense
-                else:
-                    self.sense = -1
-                return
-        self.sense = -1
 
     def update_collocations(self, collocations, pattern, k, sense_count):
         # 0: Word immediately to the right
