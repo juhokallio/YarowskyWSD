@@ -36,7 +36,7 @@ class Collocation:
                 return index
 
     def plus(self, sense, amount=1):
-        assert sense < len(self.senses), "No such sense"
+        assert sense < len(self.senses), "No such sense: " + str(sense) + ". len(self.senses): " + str(len(self.senses))
         self.senses[sense] += amount
         self.count += amount
         return self

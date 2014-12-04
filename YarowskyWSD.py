@@ -7,7 +7,7 @@ from models import Collocation, Context, Document
 from utils import index_of_pattern
 
 # Minimum log-likelihood ratio that causes a context to get classified.
-THRESHOLD = 3.9
+THRESHOLD = 5.5
 
 table = string.maketrans("","")
 
@@ -115,7 +115,7 @@ def run(pattern, seeds, k):
     print "Reading data..."
     contexts = extract_contexts_from_folder(folder, pattern, k)
     classified_contexts = init_classified_contexts(contexts, seeds)
-    words_and_rule_to_collocations = build_words_and_rule_to_collocations_map(classified_contexts, pattern, k, 2)
+    words_and_rule_to_collocations = build_words_and_rule_to_collocations_map(classified_contexts, pattern, k, len(seeds))
     collocations = get_sorted_collocations(words_and_rule_to_collocations)
 
     for i in range(0, 1000):
@@ -125,6 +125,8 @@ def run(pattern, seeds, k):
 
         print "sense 1", sum(1 for c in contexts if c.sense == 0)
         print "sense 2", sum(1 for c in contexts if c.sense == 1)
+        print "sense 3", sum(1 for c in contexts if c.sense == 2)
+        print "sense 4", sum(1 for c in contexts if c.sense == 3)
         print "not classified", sum(1 for c in contexts if c.sense == -1)
 
         classified_contexts = []
@@ -137,24 +139,27 @@ def run(pattern, seeds, k):
         # for co in classified_contexts:
         #         print co.sense, co.text
 
-        new_words_and_rule_to_collocations = build_words_and_rule_to_collocations_map(classified_contexts, pattern, k, 2)
+        new_words_and_rule_to_collocations = build_words_and_rule_to_collocations_map(classified_contexts, pattern, k, len(seeds))
         new_collocations = get_sorted_collocations(new_words_and_rule_to_collocations)
+
+
         if new_collocations == collocations:
-            # for co in classified_contexts[:200]:
-            #     print co.sense, co.text
+            log = open(log_filename, "w")
+            print "number of classified contexts: " + str(len(classified_contexts))
+            for co in classified_contexts[:150]:
+                log.write(str(co.sense) + " " + " ".join(co.text) + "\n")
             break
         else:
             collocations = new_collocations
 
-    log = open(log_filename, "w")
-    for k, c in enumerate(collocations):
-        line = "{} {} {} {} {}\n".format(k + 1, c.log_likelihood(), c.rule, c.words, c.best_sense())
-        log.write(line)
+    # for k, c in enumerate(collocations):
+    #     line = "{} {} {} {} {}\n".format(k + 1, c.log_likelihood(), c.rule, c.words, c.best_sense())
+    #     log.write(line)
 
     log.close()
 
 
-run("bass", ["fish", "player"], 10)
+run("space", ["shuttle", "office"], 10)
 
 
 class TextExtraction(unittest.TestCase):
