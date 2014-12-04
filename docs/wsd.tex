@@ -1,0 +1,69 @@
+\documentclass[finnish]{article}
+
+% tktltiki2 automatically loads babel, so you can simply
+% give the language parameter (e.g. finnish, swedish, english, british) as
+% a parameter for the class: \documentclass[finnish]{tktltiki2}.
+% The information on title and abstract is generated automatically depending on
+% the language, see below if you need to change any of these manually.
+
+% The default font size is 11pt. The paper size used is A4, other sizes are not supported.
+%
+% rubber: module pdftex
+
+% --- General packages ---
+
+\RequirePackage{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsfonts,amsmath,amssymb,amsthm,booktabs,color,enumitem,graphicx}
+\usepackage[pdftex,hidelinks]{hyperref}
+\usepackage{mathtools}
+
+\definecolor{green1}{rgb}{0,0.5,0}
+
+\DeclarePairedDelimiter\abs{\lvert}{\rvert}%
+
+% Automatically set the PDF metadata fields
+\makeatletter
+\AtBeginDocument{\hypersetup{pdftitle = {\@title}, pdfauthor = {\@author}}}
+\makeatother
+
+\renewcommand{\labelenumi}{(\alph{enumi})}
+
+% --- Language-related settings ---
+%
+% these should be modified according to your language
+
+% babelbib for non-english bibliography using bibtex
+
+\title{NLP Project: Yarowsky Word Sense Disambiguation Algorithm}
+\author{Juho Kallio and Otto Wallenius}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\section{Introduction}
+
+\section{Implementation}
+We implemented Yarowsky's unsupervised word sense disambiguation algorithm with Python. We used test-driven development.
+
+\section{Results}
+
+\begin{tabular}{l l l l l l}
+\textbf{Pattern} & \textbf{Seeds} & \textbf{k} & \textbf{Threshold} & \textbf{Epsilon} & \textbf{Accuracy} \\
+plant   & growth, car     & 19 & 4.5 & 0.0001 & 94\% \\
+light   & wind, bright    & 19 & 7.5 & 0.0001 & 60\% \\
+space   & shuttle, office & 10 & 7   & 0.2    & 89\% \\
+tank    & army, gallons   & 19 & 10  & 0.001  & 88\% \\
+
+\end{tabular}
+
+\section{Conclusions}
+The algorithm did not perform very well, worse than we expected. With low values of \emph{k}, we started to experience problems with common words. Words like \emph{since} started to show up as good rules: we believe this was because of the smallish data set. When the lexicon is too big compared to the corpus, some common ones start to appear only with the more common sense of the original word. With a bigger value of \emph{k} this effect diminishes.
+
+We got best results using a very small epsilon value, about 0.001. With the small data set the rules for the less common sense gained only few hits, and with a big epsilon these fell quickly out.
+
+\end{document}

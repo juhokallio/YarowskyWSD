@@ -2,3 +2,8 @@
 *.pyc
 data/
 testData/
+*.out
+*.log
+*.aux
+*~
+*.fdb_latexmk
