@@ -7,7 +7,7 @@ from utils import index_of_pattern
 
 class Collocation:
     # Epsilon
-    E = 0.2
+    E = 0.001
 
     def __init__(self, words, rule, sense_count):
         self.words = words

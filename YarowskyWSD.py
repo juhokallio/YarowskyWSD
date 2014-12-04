@@ -1,13 +1,16 @@
 #coding: utf8
+#!/usr/bin/python
 
 import unittest
 import string
+import sys
+import getopt
 from os import listdir
 from models import Collocation, Context, Document
 from utils import index_of_pattern
 
 # Minimum log-likelihood ratio that causes a context to get classified.
-THRESHOLD = 5.5
+THRESHOLD = 10
 
 table = string.maketrans("","")
 
@@ -96,7 +99,28 @@ def classify(context, collocations, pattern, k, threshold):
             return
     context.sense = -1
 
+############## command line interface #################
+def print_help():
+    print "Usage: python {} pattern seed1 seed2 ...".format(parseFileName(sys.argv[0]))
 
+def parseFileName(path):
+    #  if there's a / in the middle
+    if "/" in path.strip("/"):
+        return path.rsplit("/", 1)[0]
+    else:
+        return path.strip("/")
+
+def parse_command_line_arguments_and_run():
+    args = sys.argv[1:]
+
+    if len(args) < 3:
+        print_help()
+        exit(1)
+
+    pattern = args[0]
+    seeds = args[1:]
+    k = 19
+    run(pattern, seeds, k)
 #
 # Function: run
 #
@@ -111,7 +135,7 @@ def classify(context, collocations, pattern, k, threshold):
 #
 def run(pattern, seeds, k):
     folder = "data"
-    log_filename = "collocations.log"
+    log_filename = "light.log"
     print "Reading data..."
     contexts = extract_contexts_from_folder(folder, pattern, k)
     classified_contexts = init_classified_contexts(contexts, seeds)
@@ -125,8 +149,8 @@ def run(pattern, seeds, k):
 
         print "sense 1", sum(1 for c in contexts if c.sense == 0)
         print "sense 2", sum(1 for c in contexts if c.sense == 1)
-        print "sense 3", sum(1 for c in contexts if c.sense == 2)
-        print "sense 4", sum(1 for c in contexts if c.sense == 3)
+        # print "sense 3", sum(1 for c in contexts if c.sense == 2)
+        # print "sense 4", sum(1 for c in contexts if c.sense == 3)
         print "not classified", sum(1 for c in contexts if c.sense == -1)
 
         classified_contexts = []
@@ -145,8 +169,12 @@ def run(pattern, seeds, k):
 
         if new_collocations == collocations:
             log = open(log_filename, "w")
-            print "number of classified contexts: " + str(len(classified_contexts))
-            for co in classified_contexts[:150]:
+            log.write("pattern:\t\t{}\n".format(pattern))
+            log.write("seeds:\t\t{}\t{}\n".format(seeds[0], seeds[1]))
+            log.write("sense 0" + str(sum(1 for c in contexts if c.sense == 0)) + "\n")
+            log.write("sense 1" + str(sum(1 for c in contexts if c.sense == 1)) + "\n")
+            log.write("not classified" + str(sum(1 for c in contexts if c.sense == -1)))
+            for co in classified_contexts[:200]:
                 log.write(str(co.sense) + " " + " ".join(co.text) + "\n")
             break
         else:
@@ -159,7 +187,7 @@ def run(pattern, seeds, k):
     log.close()
 
 
-run("space", ["shuttle", "office"], 10)
+parse_command_line_arguments_and_run()
 
 
 class TextExtraction(unittest.TestCase):
