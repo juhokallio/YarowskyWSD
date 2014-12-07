@@ -46,7 +46,7 @@
 
 \maketitle
 \section{Project topic}
-As a mini-project for the Natural Language Processing class we implemented Yarowsky's unsupervised word sense disambiguation algorithm. The program takes as input an ambiguous word with more than one possible meanings --- we call this word a \emph{pattern} --- and tries to solve all disambiguities regarding the pattern in a given corpus (the program works only for the 1988 AP news article corpus). Additionally, the program takes as input ``seed words'', one for each meaning of the pattern. These are words that the user thinks that occur often together with the pattern in cases where the pattern is used in a specific sense. In the following sections we present some test results and thoughts about them.
+As a mini-project for the Natural Language Processing class we implemented Yarowsky's unsupervised word sense disambiguation algorithm. The program takes as input an ambiguous word with more than one possible meanings --- we call this word a \emph{pattern} --- and tries to resolve all ambiguities regarding the pattern in a given corpus (the program works only for the 1988 AP news article corpus). Additionally, the program takes as input ``seed words'', one for each meaning of the pattern. These are words that the user thinks that occur often together with the pattern in cases where the pattern is used in a specific sense. In the following sections we present some test results and thoughts about them.
 
 \section{Results}
 Below are some results from test runs. Accuracy is the percentage of cases where the algorithm agreed with a human on the meaning of an occurrence of the tested pattern. For each pattern the results were calculated using 100 occurrences.
@@ -75,7 +75,7 @@ To run the program, download the sources from
 \begin{itemize}
 \item \texttt{/fs/home/tkt\_plus/nlp/Corpus/ap-1988}.
 \end{itemize}
-Save the AP corpus files to a directory named \texttt{data} in the document root directory. Them extract the AP corpus files (with command \texttt{gzip -d *} in the data directory). After that, in the project root directory run the program with command \texttt{python YarowskyWSD pattern seed1 seed2 ...}
+Save the AP corpus files to a directory named \texttt{data} in the document root directory. Them extract the AP corpus files (with command \texttt{gzip -d *} in the data directory). After that, in the project root directory run the program with command \texttt{python YarowskyWSD.py pattern seed1 seed2 ...}
 
 The parameters $k$, $\epsilon$ and classification threshold are fixed. They are set in \texttt{YarowskyWSD.py}.
 
