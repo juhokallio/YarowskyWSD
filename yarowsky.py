@@ -1,18 +1,20 @@
-#coding: utf8
-#!/usr/bin/python
+# coding: utf8
+# !/usr/bin/python
 
 import unittest
 import string
 import sys
-import getopt
 from os import listdir
 from models import Collocation, Context, Document
-from utils import index_of_pattern
+from utils import index_of_pattern, parse_file_name
 
 # Minimum log-likelihood ratio that causes a context to get classified.
 THRESHOLD = 12
+# The strings separating the text blocks in the corpus.
+BEGIN = "<TEXT>"
+END = "</TEXT>"
 
-table = string.maketrans("","")
+table = string.maketrans("", "")
 
 
 def init_classified_contexts(contexts, seeds):
@@ -25,25 +27,23 @@ def init_classified_contexts(contexts, seeds):
                 classified_contexts.append(context)
     return classified_contexts
 
-def build_words_and_rule_to_collocations_map(contexts, pattern, k, sense_count):
-    words_and_rule_to_collocations = {}
+
+def build_collocations_map(contexts, pattern, k, sense_count):
+    """
+    Builds collocation map where the tuple (words, rule) will be the key
+    """
+    collocation_words_rule_map = {}
     for context in contexts:
-        context.update_collocations(words_and_rule_to_collocations, pattern, k, sense_count)
-    return words_and_rule_to_collocations
-
-#
-# Function get_sorted_collocations
-#
-# Takes as input a words-and-rules-to-collocations map and returns a list of collocations
-# sorted by log-likelihood ratio.
-#
-def get_sorted_collocations(words_and_rule_to_collocations):
-   # big_enough = [c for c in collocations.values() if c.log_likelihood() > THRESHOLD]
-    return sorted(words_and_rule_to_collocations.values(), lambda x,y: x.cmp(y))
+        context.update_collocations(collocation_words_rule_map, pattern, k, sense_count)
+    return collocation_words_rule_map
 
 
-BEGIN = "<TEXT>"
-END = "</TEXT>"
+def get_sorted_collocations(collocation_words_rule_map):
+    """
+    Takes as input a words-and-rules-to-collocations map and returns a list of collocations
+    sorted by log-likelihood ratio.
+    """
+    return sorted(collocation_words_rule_map.values(), lambda x,y: x.cmp(y))
 
 
 def split_to_articles(text):
@@ -57,10 +57,9 @@ def split_to_articles(text):
             articles.append(article)
             article = []
         else:
-            #Remove punctuation, lower case
+            # Remove punctuation, lower case
             stripped = word.translate(table, string.punctuation).lower()
             article.append(stripped)
-    # print len(articles), "articles collected"
     return articles
 
 
@@ -83,7 +82,6 @@ def extract_contexts_from_folder(folder, pattern, k):
         for article in articles:
             contexts.extend(extract_context_list(article, pattern, k))
             document_id += 1
-        # print len(contexts), "contexts from the file", f, "extracted"
     return contexts
 
 
@@ -99,18 +97,62 @@ def classify(context, collocations, pattern, k, threshold):
             return
     context.sense = -1
 
-############## command line interface #################
-def print_help():
-    print "Usage: python {} pattern seed1 seed2 ...".format(parseFileName(sys.argv[0]))
 
-def parseFileName(path):
-    #  if there's a / in the middle
-    if "/" in path.strip("/"):
-        return path.rsplit("/", 1)[0]
-    else:
-        return path.strip("/")
+def run(pattern, seeds, k):
+    """
+    Runs Yarowsky's word sense disambiguation algorithm.
 
-def parse_command_line_arguments_and_run():
+    Parameters:
+    pattern: A word with multiple senses.
+    seeds:   Seed words for the algorithm, one for each sense. Should be semantically or otherwise related to the
+             corresponding senses.
+    k:       The number of words to left and right from a pattern occurrence that the algorithm notices when
+             looking for words that occur in the same environment with the pattern.
+    """
+    folder = "data"
+    log_filename = "log"
+    print "Reading data..."
+    contexts = extract_contexts_from_folder(folder, pattern, k)
+    classified_contexts = init_classified_contexts(contexts, seeds)
+    words_and_rule_to_collocations = build_collocations_map(classified_contexts, pattern, k, len(seeds))
+    collocations = get_sorted_collocations(words_and_rule_to_collocations)
+
+    for i in range(0, 1000):
+        print (i + 1), "iteration"
+        for sense in range(len(seeds)):
+            print "sense", (sense + 1), sum(1 for c in contexts if c.sense == sense)
+
+        classified_contexts = []
+        for index, context in enumerate(contexts):
+            classify(context, collocations, pattern, k, THRESHOLD)
+            if context.has_sense():
+                classified_contexts.append(context)
+
+        new_words_and_rule_to_collocations = build_collocations_map(classified_contexts, pattern, k, len(seeds))
+        new_collocations = get_sorted_collocations(new_words_and_rule_to_collocations)
+
+        # If no changes, stop
+        if new_collocations == collocations:
+            log = open(log_filename, "w")
+            log.write("Pattern: {}\n".format(pattern))
+            log.write("Seeds: {}\t{}\n".format(seeds[0], seeds[1]))
+            log.write("Sense 0: " + str(sum(1 for c in contexts if c.sense == 0)) + "\n")
+            log.write("Sense 1: " + str(sum(1 for c in contexts if c.sense == 1)) + "\n")
+            log.write("Not classified: " + str(sum(1 for c in contexts if c.sense == -1)) + "\n")
+            for co in classified_contexts[:200]:
+                log.write(str(co.sense) + " " + " ".join(co.text) + "\n")
+            print "The output was saved to the file \"log\"."
+            break
+        else:
+            collocations = new_collocations
+    log.close()
+
+
+def run_program():
+    def print_help():
+        print "Usage: python {} pattern seed1 seed2 ...".format(parse_file_name(sys.argv[0]))
+        print "The output will be saved to the file \"log\"."
+
     args = sys.argv[1:]
 
     if len(args) < 3:
@@ -121,73 +163,9 @@ def parse_command_line_arguments_and_run():
     seeds = args[1:]
     k = 19
     run(pattern, seeds, k)
-#
-# Function: run
-#
-# Runs Yarowsky's word sense disambiguation algorithm.
-#
-# Parameters:
-#   pattern: A word with multiple senses.
-#   seeds:   Seed words for the algorithm, one for each sense. Should be semantically or otherwise related to the
-#            corresponding senses.
-#   k:       The number of words to left and right from a pattern occurrence that the algorithm notices when
-#            looking for words that occur in the same environment with the pattern.
-#
-def run(pattern, seeds, k):
-    folder = "data"
-    log_filename = "log"
-    print "Reading data..."
-    contexts = extract_contexts_from_folder(folder, pattern, k)
-    classified_contexts = init_classified_contexts(contexts, seeds)
-    words_and_rule_to_collocations = build_words_and_rule_to_collocations_map(classified_contexts, pattern, k, len(seeds))
-    collocations = get_sorted_collocations(words_and_rule_to_collocations)
 
-    for i in range(0, 1000):
-        # print i, "iteration"
-        # for j in range(0, 80):
-        #     print j + 1, collocations[j].log_likelihood(), collocations[j].rule, collocations[j].words, collocations[j].best_sense(), "[", collocations[j].senses[0], ", ", collocations[j].senses[1], "]"
 
-        # print "sense 1", sum(1 for c in contexts if c.sense == 0)
-        # print "sense 2", sum(1 for c in contexts if c.sense == 1)
-        # print "sense 3", sum(1 for c in contexts if c.sense == 2)
-        # print "sense 4", sum(1 for c in contexts if c.sense == 3)
-        # print "not classified", sum(1 for c in contexts if c.sense == -1)
-
-        classified_contexts = []
-        for index, context in enumerate(contexts):
-            classify(context, collocations, pattern, k, THRESHOLD)
-            if context.has_sense():
-                classified_contexts.append(context)
-
-        # print len(classified_contexts), "contexts classified"
-        # for co in classified_contexts:
-        #         print co.sense, co.text
-
-        new_words_and_rule_to_collocations = build_words_and_rule_to_collocations_map(classified_contexts, pattern, k, len(seeds))
-        new_collocations = get_sorted_collocations(new_words_and_rule_to_collocations)
-
-        # if no changes, stop
-        if new_collocations == collocations:
-            log = open(log_filename, "w")
-            log.write("Pattern: {}\n".format(pattern))
-            log.write("Seeds: {}\t{}\n".format(seeds[0], seeds[1]))
-            log.write("Sense 0: " + str(sum(1 for c in contexts if c.sense == 0)) + "\n")
-            log.write("Sense 1: " + str(sum(1 for c in contexts if c.sense == 1)) + "\n")
-            log.write("Not classified: " + str(sum(1 for c in contexts if c.sense == -1)) + "\n")
-            for co in classified_contexts[:200]:
-                log.write(str(co.sense) + " " + " ".join(co.text) + "\n")
-            break
-        else:
-            collocations = new_collocations
-
-    # for k, c in enumerate(collocations):
-    #     line = "{} {} {} {} {}\n".format(k + 1, c.log_likelihood(), c.rule, c.words, c.best_sense())
-    #     log.write(line)
-
-    log.close()
-
-# run('rock', ['music', 'sand'], 19)
-parse_command_line_arguments_and_run()
+run_program()
 
 
 class TextExtraction(unittest.TestCase):
@@ -225,7 +203,7 @@ class TextExtraction(unittest.TestCase):
         self.assertEqual(context_list[0].text.count(pattern), 2)
         senses = ["yleisiä"]
         init_classified_contexts(context_list, senses)
-        collocations = build_words_and_rule_to_collocations_map(context_list, pattern, k, len(senses))
+        collocations = build_collocations_map(context_list, pattern, k, len(senses))
         self.assertEqual(collocations["opit", 0].get_sense_count(0), 1)
         self.assertEqual(collocations["menetelmiä", 0].get_sense_count(0), 1)
         self.assertEqual(collocations["tämän", 2].get_sense_count(0), 1)

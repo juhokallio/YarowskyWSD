@@ -1,9 +1,8 @@
-__author__ = 'juka'
-
 import math
 import unittest
 from rules import RULES
 from utils import index_of_pattern
+
 
 class Collocation:
     # Epsilon
@@ -15,8 +14,10 @@ class Collocation:
         self.senses = [0] * sense_count
         self.count = 0
 
-    # Probability
     def p(self, sense):
+        """
+        The probability of the collocation
+        """
         assert sense < len(self.senses), "No such sense"
         p = (self.senses[sense] + self.E) / (self.count + self.E * len(self.senses))
         assert p < 1, "Probability should never be 1"
@@ -105,7 +106,7 @@ class Document:
 
 
 class TextCollocation(unittest.TestCase):
-    longMessage = True
+
     def test_p(self):
         collocation = Collocation("a", 0, 3)
         collocation.plus(0)

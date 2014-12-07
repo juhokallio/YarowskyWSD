@@ -1,11 +1,22 @@
-__author__ = 'juka'
-
 import unittest
 
 
-# Currently doesn't take account repeating patterns in the end or beginning of corpus.
-# Flag based approach should fix this, but gains are minimal.
+def parse_file_name(path):
+    """
+    Strips the directory from path. Leaves the file name.
+    Returns the file name without a directory.
+    """
+    if "/" in path.strip("/"):
+        return path.rsplit("/", 1)[0]
+    else:
+        return path.strip("/")
+
+
 def index_of_pattern(text, pattern, k):
+    """
+    Currently doesn't take account repeating patterns in the end or beginning of corpus.
+    Flag based approach should fix this, but gains are minimal.
+    """
     for index, value in enumerate(text):
         if value == pattern:
             last_match = index
@@ -14,7 +25,7 @@ def index_of_pattern(text, pattern, k):
     return last_match
 
 
-class TextUtils(unittest.TestCase):
+class TestUtils(unittest.TestCase):
     def test_index_of_pattern(self):
         pattern = "ja"
         text = ["a", pattern, "b"]

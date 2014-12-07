@@ -1,6 +1,3 @@
-__author__ = 'juka'
-
-
 def k_closest(context, index_of_pattern, words):
     for index, w in enumerate(context):
         if w == words and (index < index_of_pattern - 1 or index > index_of_pattern + 1):
